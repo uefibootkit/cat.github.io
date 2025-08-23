@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simple Bio</title>
+
+<link href="https://fonts.cdnfonts.com/css/minecraftia" rel="stylesheet">
+<link rel="icon" href="snow.png" type="image/png">
+
+<style>
+body {
+  margin:0;
+  height:100vh;
+  perspective:800px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Minecraftia', monospace;
+  color:white;
+  background:black;
+}
+
+/* Background */
+#parallax-bg {
+  position: fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  z-index:-2;
+  overflow:hidden;
+}
+.bg-fade {
+  position:absolute;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:url('bg.png') no-repeat center center;
+  background-size:cover;
+  opacity:0;
+  transition:opacity 1.8s ease-out;
+}
+.bg-fade::after {
+  content:''; position:absolute; top:0; left:0; width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  pointer-events:none;
+}
+
+/* Overlay */
+#overlay {
+  position:fixed;
+  top:0; left:0; width:100%; height:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  z-index:10;
+  background: rgba(0,0,0,0.7);
+}
+#click-container { cursor:pointer; transition: transform 0.3s; padding:8px 16px; }
+#click-container:hover { transform: scale(1.05); }
+#click-text { font-size:3rem; text-transform:lowercase; letter-spacing:2px; text-shadow:0 0 10px rgba(255,255,255,0.5),0 0 20px rgba(255,255,255,0.3); }
+.hidden { display:none !important; }
+
+/* Spinning Text */
+.spin-text {
+  font-size:3rem; letter-spacing:1px; position:absolute; top:-100px; left:300px;
+  transform-style: preserve-3d; opacity:0; visibility:hidden;
+}
+.animate-in { opacity:1; visibility:visible; animation: move-diagonal 3s ease-out forwards, spin 3s linear infinite; }
+@keyframes move-diagonal {
+  0% { top:-100px; left:300px; transform:rotateY(0deg); opacity:0; }
+  100% { top:400px; left:300px; transform:rotateY(360deg); opacity:1; }
+}
+@keyframes spin { from{transform:rotateY(360deg);} to{transform:rotateY(720deg);} }
+
+/* RGB glow */
+.spin-text::before {
+  content:attr(data-text); position:absolute; top:0; left:0; color:transparent;
+  text-shadow:0 0 6px rgba(255,0,0,0.2),0 0 8px rgba(0,255,0,0.15),0 0 10px rgba(0,0,255,0.15);
+  filter: blur(0.5px); z-index:-1; pointer-events:none;
+  animation: rgbPulse 4s ease-in-out infinite alternate;
+}
+.spin-text::after {
+  content:attr(data-text); position:absolute; top:0; left:0; color:transparent;
+  text-shadow:0 0 12px rgba(255,255,255,0.4); opacity:0.8; filter: blur(0.5px); z-index:-2;
+}
+@keyframes rgbPulse {
+  0% { text-shadow:0 0 5px rgba(255,0,0,0.15),0 0 7px rgba(0,255,0,0.1),0 0 9px rgba(0,0,255,0.1); }
+  100% { text-shadow:0 0 8px rgba(255,0,0,0.25),0 0 10px rgba(0,255,0,0.2),0 0 12px rgba(0,0,255,0.2); }
+}
+
+/* Social links */
+.social-container { position:absolute; top:45%; right:300px; transform:translateY(-50%); display:flex; flex-direction:column; gap:30px; opacity:0; visibility:hidden; z-index:50; }
+.social-link { font-size:2rem; color:white; text-decoration:none; letter-spacing:1px; opacity:0; text-shadow:0 0 8px rgba(255,255,255,0.4),0 0 14px rgba(255,255,255,0.3); transition: transform 0.3s; }
+.social-link:hover { transform: scale(1.1); }
+.social-show { opacity:1; visibility:visible; }
+.social-show .social-link { animation: fadeIn 1s ease-out forwards; }
+@keyframes fadeIn { 0%{opacity:0;}100%{opacity:1;} }
+
+/* Snow */
+@keyframes fall { 0%{transform:translateY(-10vh);opacity:0;}10%{opacity:1;}90%{opacity:1;}100%{transform:translateY(110vh) translateX(20px);opacity:0;} }
+
+/* Purchase */
+.purchase-container {
+  position:fixed; bottom:50px; left:50%; transform:translateX(-50%);
+  font-size:2rem; text-transform:lowercase; letter-spacing:2px;
+  opacity:0; visibility:hidden; z-index:50; cursor:pointer;
+  transition: all 0.3s ease; text-shadow:0 0 10px rgba(255,255,255,0.5),0 0 20px rgba(255,255,255,0.3);
+}
+.purchase-container:hover { transform: translateX(-50%) scale(1.1); }
+.purchase-container.rgb { animation: rgbPulse 4s ease-in-out infinite alternate; filter: drop-shadow(0 0 10px rgba(255,255,255,0.8)); }
+.purchase-container.active { opacity:1; visibility:visible; animation: fadeIn 1s ease-out forwards; }
+
+/* Overlay darken */
+.darken-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); opacity:0; visibility:hidden; z-index:40; transition: all 0.5s ease; }
+.darken-overlay.active { opacity:1; visibility:visible; }
+
+</style>
+</head>
+<body>
+
+<div id="parallax-bg"><div class="bg-fade" id="bg-fade"></div></div>
+
+<div id="overlay"><div id="click-container"><span id="click-text">click me</span></div></div>
+
+<div class="spin-text" data-text="bombcrash" id="hello-text">bombcrash</div>
+
+<audio id="music" loop><source src="song.mp3" type="audio/mpeg"></audio>
+
+<div id="snow-container" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1000;"></div>
+
+<div class="social-container" id="social-container">
+  <a href="https://discord.gg/she9Rtg8Nf" target="_blank" class="social-link discord">discord</a>
+  <a href="https://youtube.com/@ItsYuso" target="_blank" class="social-link youtube">youtube</a>
+</div>
+
+<!-- Purchase as link -->
+<div class="purchase-container" id="purchase-text">purchase</div>
+<div class="darken-overlay" id="darken-overlay"></div>
+
+<script>
+const overlay = document.getElementById("overlay");
+const helloText = document.getElementById("hello-text");
+const music = document.getElementById("music");
+const bgFade = document.getElementById("bg-fade");
+const snowContainer = document.getElementById("snow-container");
+const socialContainer = document.getElementById("social-container");
+const purchaseText = document.getElementById("purchase-text");
+const darkenOverlay = document.getElementById("darken-overlay");
+
+music.volume = 0.3;
+const startTime = 0.3;
+
+// Click to start animation
+document.getElementById("click-container").addEventListener("click", function(e){
+  e.stopPropagation();
+  overlay.classList.add("hidden");
+  bgFade.style.opacity = 1;
+  helloText.classList.add("animate-in");
+  music.currentTime = startTime;
+  music.play().catch(err=>console.error(err));
+  createSnowflakes(50);
+
+  helloText.addEventListener("animationend", function(e){
+    if(e.animationName==="move-diagonal"){
+      socialContainer.classList.add("social-show");
+      setTimeout(()=>{ purchaseText.classList.add("active"); }, 500);
+    }
+  }, { once:true });
+});
+
+// Snowflakes
+function createSnowflakes(count){
+  for(let i=0;i<count;i++){
+    setTimeout(()=>{
+      const snow=document.createElement("img");
+      snow.src="snowflake.png";
+      snow.alt="snow";
+      snow.loading="lazy";
+      snow.style.position="absolute";
+      snow.style.width=Math.random()*20+10+"px";
+      snow.style.height="auto";
+      snow.style.left=Math.random()*100+"vw";
+      snow.style.top="-30px";
+      snow.style.opacity=Math.random()*0.7+0.3;
+      snow.style.pointerEvents="none";
+      snow.style.filter="drop-shadow(0 0 5px rgba(255,255,255,0.5))";
+      snow.style.animation=`fall ${Math.random()*10+10}s linear infinite`;
+      snow.style.animationDelay=Math.random()*5+"s";
+      snowContainer.appendChild(snow);
+    }, i*200);
+  }
+}
+
+// Smooth volume transition
+function fadeVolume(target, duration=300){
+  const initial = music.volume;
+  const diff = target - initial;
+  const steps = 30;
+  let i=0;
+  const interval = setInterval(()=>{
+    i++;
+    music.volume = initial + diff*(i/steps);
+    if(i>=steps) clearInterval(interval);
+  }, duration/steps);
+}
+
+// Purchase hover
+purchaseText.addEventListener("mouseenter", function(){
+  darkenOverlay.classList.add("active");
+  fadeVolume(0.1, 500);
+  purchaseText.classList.add("rgb","bloom");
+});
+purchaseText.addEventListener("mouseleave", function(){
+  darkenOverlay.classList.remove("active");
+  fadeVolume(0.3, 500);
+  purchaseText.classList.remove("rgb","bloom");
+});
+
+// Make purchase clickable
+purchaseText.addEventListener("click", function(){
+  window.location.href = "https://bombcrash.github.io/test.github.io/"; // <-- Replace with your link
+});
+
+// Parallax effect
+document.addEventListener("mousemove",(e)=>{
+  const x=(e.clientX/window.innerWidth)*100;
+  const y=(e.clientY/window.innerHeight)*100;
+  bgFade.style.transform = `translate(-${x*0.2}px,-${y*0.2}px) scale(1.05)`;
+});
+</script>
+
+</body>
+</html>
